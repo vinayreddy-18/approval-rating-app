@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% set show_nav = false %}
+
+{% block title %}Political Pulse India{% endblock %}
+
+{% block content %}
+<div class="row min-vh-100 align-items-center py-5">
+    <div class="col-xl-8 mx-auto text-center fade-up">
+        <p class="eyebrow mb-3">Editorial analytics · real time</p>
+        <h1 class="hero-title">POLITICAL PULSE<br>INDIA</h1>
+        <p class="hero-subtitle mb-4">Real-time approval tracking for the current political landscape.</p>
+        <button id="login-btn" class="btn btn-modern mt-3">Sign In With Google</button>
+
+        <div class="row g-4 mt-4">
+            <div class="col-md-6">
+                <a href="/approval" class="text-decoration-none">
+                    <div class="card-modern portal-card h-100">
+                        <h2>Approval Ratings</h2>
+                        <p>Vote on leaders and explore shifting sentiment.</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-6">
+                <a href="/pulse" class="text-decoration-none">
+                    <div class="card-modern portal-card h-100">
+                        <h2>Public Pulse</h2>
+                        <p>Coming Soon · broader civic insights.</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

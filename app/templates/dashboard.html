@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard · Political Pulse India{% endblock %}
+
+{% block content %}
+<div class="py-3 fade-up">
+    <p class="eyebrow">Welcome</p>
+    <h2 class="hero-title mb-3">{{ user_email or 'Guest' }}</h2>
+    <p class="hero-subtitle mb-4">Choose a portal to continue exploring political sentiment.</p>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <a href="/approval{% if user_email %}?email={{ user_email|urlencode }}{% endif %}" class="text-decoration-none">
+                <div class="card-modern portal-card h-100">
+                    <h2>Approval Ratings</h2>
+                    <p>Review leader approval, compare politicians, and cast your vote.</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6">
+            <a href="/pulse{% if user_email %}?email={{ user_email|urlencode }}{% endif %}" class="text-decoration-none">
+                <div class="card-modern portal-card h-100">
+                    <h2>Public Pulse</h2>
+                    <p>A new civic analytics experience is on the way.</p>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
