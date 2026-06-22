@@ -15,7 +15,7 @@ def calculate_percentages(cur, politician_id):
         """
         SELECT vote_type, COUNT(*) AS count
         FROM votes
-        WHERE politician_id = ?
+        WHERE politician_id = %s
         GROUP BY vote_type
         """,
         (politician_id,),
@@ -113,7 +113,7 @@ def get_platform_stats(cur):
 def get_politicians_with_context(cur, uid=None):
     user_id = None
     if uid:
-        cur.execute('SELECT id FROM users WHERE firebase_uid = ?', (uid,))
+        cur.execute('SELECT id FROM users WHERE firebase_uid = %s', (uid,))
         user_row = cur.fetchone()
         if user_row is not None:
             user_id = user_row['id']
@@ -128,7 +128,7 @@ def get_politicians_with_context(cur, uid=None):
 
         if user_id is not None:
             cur.execute(
-                'SELECT vote_type FROM votes WHERE user_id = ? AND politician_id = ?',
+                'SELECT vote_type FROM votes WHERE user_id = %s AND politician_id = %s',
                 (user_id, politician['id']),
             )
             vote_row = cur.fetchone()
@@ -212,13 +212,13 @@ def vote():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    cur.execute('SELECT id FROM politicians WHERE id = ?', (politician_id,))
+    cur.execute('SELECT id FROM politicians WHERE id = %s', (politician_id,))
     row = cur.fetchone()
     if row is None:
         conn.close()
         return jsonify({'error': 'Politician not found'}), 404
 
-    cur.execute('SELECT id FROM users WHERE firebase_uid = ?', (user_uid,))
+    cur.execute('SELECT id FROM users WHERE firebase_uid = %s', (user_uid,))
     user_row = cur.fetchone()
     if user_row is None:
         conn.close()
@@ -227,21 +227,21 @@ def vote():
     user_id = user_row['id']
 
     cur.execute(
-        'SELECT id, vote_type FROM votes WHERE user_id = ? AND politician_id = ?',
+        'SELECT id, vote_type FROM votes WHERE user_id = %s AND politician_id = %s',
         (user_id, politician_id),
     )
     existing_vote = cur.fetchone()
 
     if existing_vote is None:
         cur.execute(
-            'INSERT INTO votes (user_id, politician_id, vote_type) VALUES (?, ?, ?)',
+            'INSERT INTO votes (user_id, politician_id, vote_type) VALUES (%s, %s, %s)',
             (user_id, politician_id, vote_type),
         )
-        vote_id = cur.lastrowid
+        vote_id = cur.fetchone()['id']
         message = 'Vote recorded'
     else:
         cur.execute(
-            'UPDATE votes SET vote_type = ? WHERE user_id = ? AND politician_id = ?',
+            'UPDATE votes SET vote_type = %s WHERE user_id = %s AND politician_id = %s',
             (vote_type, user_id, politician_id),
         )
         vote_id = existing_vote['id']
