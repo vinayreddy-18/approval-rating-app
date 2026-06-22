@@ -28,16 +28,16 @@ def login():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    cur.execute('SELECT id FROM users WHERE firebase_uid = ?', (uid,))
+    cur.execute('SELECT id FROM users WHERE firebase_uid = %s', (uid,))
     user_row = cur.fetchone()
 
     if user_row is None:
-        cur.execute('INSERT INTO users (firebase_uid, email) VALUES (?, ?)', (uid, email))
+        cur.execute('INSERT INTO users (firebase_uid, email) VALUES (%s, %s)', (uid, email))
         conn.commit()
         user_id = cur.lastrowid
     else:
         user_id = user_row['id']
-        cur.execute('UPDATE users SET email = ? WHERE id = ?', (email, user_id))
+        cur.execute('UPDATE users SET email = %s WHERE id = %s', (email, user_id))
         conn.commit()
 
     conn.close()
