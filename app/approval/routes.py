@@ -232,13 +232,15 @@ def vote():
     )
     existing_vote = cur.fetchone()
 
+    
     if existing_vote is None:
         cur.execute(
-            'INSERT INTO votes (user_id, politician_id, vote_type) VALUES (%s, %s, %s)',
+            'INSERT INTO votes (user_id, politician_id, vote_type) VALUES (%s, %s, %s) RETURNING id',
             (user_id, politician_id, vote_type),
         )
         vote_id = cur.fetchone()['id']
         message = 'Vote recorded'
+
     else:
         cur.execute(
             'UPDATE votes SET vote_type = %s WHERE user_id = %s AND politician_id = %s',

@@ -17,6 +17,7 @@ def _is_admin(email):
 @admin_bp.route('/admin')
 def admin_dashboard():
     user_email = (request.args.get('email') or '').strip()
+
     if not _is_admin(user_email):
         return 'Access Denied'
 
@@ -28,7 +29,12 @@ def admin_dashboard():
 
     cur.execute(
         '''
-        SELECT votes.id, users.email AS user_email, politicians.name AS politician_name, votes.vote_type, votes.timestamp
+        SELECT 
+            votes.id,
+            users.email AS user_email,
+            politicians.name AS politician_name,
+            votes.vote_type,
+            votes.timestamp
         FROM votes
         JOIN users ON votes.user_id = users.id
         JOIN politicians ON votes.politician_id = politicians.id
@@ -55,13 +61,17 @@ def admin_dashboard():
 @admin_bp.route('/admin/delete-vote', methods=['POST'])
 def delete_vote():
     user_email = (request.args.get('email') or '').strip()
+
     if not _is_admin(user_email):
         return 'Access Denied'
 
     vote_id = request.form.get('vote_id', '').strip()
+
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('DELETE FROM votes WHERE id = ?', (vote_id,))
+
+    cur.execute('DELETE FROM votes WHERE id = %s', (vote_id,))
+
     conn.commit()
     conn.close()
 
@@ -71,6 +81,7 @@ def delete_vote():
 @admin_bp.route('/admin/add-politician', methods=['POST'])
 def add_politician():
     user_email = (request.args.get('email') or '').strip()
+
     if not _is_admin(user_email):
         return 'Access Denied'
 
@@ -82,7 +93,12 @@ def add_politician():
 
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('INSERT INTO politicians (name, party) VALUES (?, ?)', (name, party))
+
+    cur.execute(
+        'INSERT INTO politicians (name, party) VALUES (%s, %s)',
+        (name, party)
+    )
+
     conn.commit()
     conn.close()
 
@@ -92,14 +108,20 @@ def add_politician():
 @admin_bp.route('/admin/export')
 def export_votes():
     user_email = (request.args.get('email') or '').strip()
+
     if not _is_admin(user_email):
         return 'Access Denied'
 
     conn = get_db_connection()
     cur = conn.cursor()
+
     cur.execute(
         '''
-        SELECT users.email, politicians.name, votes.vote_type, votes.timestamp
+        SELECT 
+            users.email,
+            politicians.name,
+            votes.vote_type,
+            votes.timestamp
         FROM votes
         JOIN users ON votes.user_id = users.id
         JOIN politicians ON votes.politician_id = politicians.id
@@ -111,10 +133,18 @@ def export_votes():
 
     output = io.StringIO()
     writer = csv.writer(output)
+
     writer.writerow(['user', 'politician', 'vote_type', 'timestamp'])
+
     for row in rows:
-        writer.writerow([row['email'], row['name'], row['vote_type'], row['timestamp']])
+        writer.writerow([
+            row['email'],
+            row['name'],
+            row['vote_type'],
+            row['timestamp']
+        ])
 
     response = Response(output.getvalue(), mimetype='text/csv')
     response.headers['Content-Disposition'] = 'attachment; filename=vote_export.csv'
+
     return response
