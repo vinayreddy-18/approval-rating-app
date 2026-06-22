@@ -5,54 +5,35 @@ main = Blueprint('main', __name__)
 
 
 def calculate_percentages(cur, politician_id):
-    """Return vote counts, total votes, net approval, and percentage stats."""
     cur.execute(
         """
         SELECT vote_type, COUNT(*) AS count
         FROM votes
-        WHERE politician_id = ?
+        WHERE politician_id = %s
         GROUP BY vote_type
         """,
         (politician_id,)
     )
-    vote_rows = cur.fetchall()
 
-    counts = {'approve': 0, 'neutral': 0, 'disapprove': 0}
-    for vote_row in vote_rows:
-        counts[vote_row['vote_type']] = vote_row['count']
+    results = cur.fetchall()
 
-    approve = counts['approve']
-    neutral = counts['neutral']
-    disapprove = counts['disapprove']
-    total_votes = approve + neutral + disapprove
+    total = sum(row['count'] for row in results) if results else 0
 
-    if total_votes == 0:
-        return {
-            'approval': 0,
-            'neutral': 0,
-            'disapproval': 0,
-            'approve_count': 0,
-            'neutral_count': 0,
-            'disapprove_count': 0,
-            'total_votes': 0,
-            'net_approval': 0,
-        }
-
-    approval_percentage = round((approve / total_votes) * 100)
-    neutral_percentage = round((neutral / total_votes) * 100)
-    disapproval_percentage = round((disapprove / total_votes) * 100)
-    net_approval = approval_percentage - disapproval_percentage
-
-    return {
-        'approval': approval_percentage,
-        'neutral': neutral_percentage,
-        'disapproval': disapproval_percentage,
-        'approve_count': approve,
-        'neutral_count': neutral,
-        'disapprove_count': disapprove,
-        'total_votes': total_votes,
-        'net_approval': net_approval,
+    stats = {
+        "approve": 0,
+        "neutral": 0,
+        "disapprove": 0
     }
+
+    for row in results:
+        vote_type = row['vote_type']
+        count = row['count']
+
+        if total > 0:
+            stats[vote_type] = round((count / total) * 100)
+
+    return stats
+
 
 
 def build_comparison(politicians_with_stats):
@@ -138,7 +119,7 @@ def home():
 
     if uid:
         # User vote lookup: resolve the Firebase UID to a local account before checking prior votes.
-        cur.execute('SELECT id FROM users WHERE firebase_uid = ?', (uid,))
+        cur.execute('SELECT id FROM users WHERE firebase_uid = %s', (uid,))
         user_row = cur.fetchone()
         if user_row is not None:
             user_id = user_row['id']
@@ -154,7 +135,7 @@ def home():
         if user_id is not None:
             # User vote lookup: check whether this signed-in user already voted for this politician.
             cur.execute(
-                'SELECT vote_type FROM votes WHERE user_id = ? AND politician_id = ?',
+                'SELECT vote_type FROM votes WHERE user_id = %s AND politician_id = %s',
                 (user_id, politician['id'])
             )
             vote_row = cur.fetchone()
@@ -228,16 +209,16 @@ def login():
     cur = conn.cursor()
 
     # User lookup: resolve the Firebase UID to a local database user record.
-    cur.execute('SELECT id FROM users WHERE firebase_uid = ?', (uid,))
+    cur.execute('SELECT id FROM users WHERE firebase_uid = %s', (uid,))
     user_row = cur.fetchone()
 
     if user_row is None:
-        cur.execute('INSERT INTO users (firebase_uid, email) VALUES (?, ?)', (uid, email))
+        cur.execute('INSERT INTO users (firebase_uid, email) VALUES (%s, %s)', (uid, email))
         conn.commit()
         user_id = cur.lastrowid
     else:
         user_id = user_row['id']
-        cur.execute('UPDATE users SET email = ? WHERE id = ?', (email, user_id))
+        cur.execute('UPDATE users SET email = %s WHERE id = %s', (email, user_id))
         conn.commit()
 
     conn.close()
@@ -266,14 +247,14 @@ def vote():
     cur = conn.cursor()
 
     # Ensure the politician exists
-    cur.execute('SELECT id FROM politicians WHERE id = ?', (politician_id,))
+    cur.execute('SELECT id FROM politicians WHERE id = %s', (politician_id,))
     row = cur.fetchone()
     if row is None:
         conn.close()
         return jsonify({'error': 'Politician not found'}), 404
 
     # User lookup: resolve the authenticated Google account to a local user id.
-    cur.execute('SELECT id FROM users WHERE firebase_uid = ?', (user_uid,))
+    cur.execute('SELECT id FROM users WHERE firebase_uid = %s', (user_uid,))
     user_row = cur.fetchone()
     if user_row is None:
         conn.close()
@@ -283,21 +264,21 @@ def vote():
 
     # Vote update logic: replace a prior vote for the same user and politician instead of creating duplicates.
     cur.execute(
-        'SELECT id, vote_type FROM votes WHERE user_id = ? AND politician_id = ?',
+        'SELECT id, vote_type FROM votes WHERE user_id = %s AND politician_id = %s',
         (user_id, politician_id)
     )
     existing_vote = cur.fetchone()
 
     if existing_vote is None:
         cur.execute(
-            'INSERT INTO votes (user_id, politician_id, vote_type) VALUES (?, ?, ?)',
+            'INSERT INTO votes (user_id, politician_id, vote_type) VALUES (%s, %s, %s)',
             (user_id, politician_id, vote_type)
         )
         vote_id = cur.lastrowid
         message = 'Vote recorded'
     else:
         cur.execute(
-            'UPDATE votes SET vote_type = ? WHERE user_id = ? AND politician_id = ?',
+            'UPDATE votes SET vote_type = %s WHERE user_id = %s AND politician_id = %s',
             (vote_type, user_id, politician_id)
         )
         vote_id = existing_vote['id']
